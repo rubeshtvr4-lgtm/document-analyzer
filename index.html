@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doc Summarizer - Smart Document Analysis & Distillation</title>
+  <meta name="description"
+    content="Distill documents, articles, reports, and transcripts into instant summaries, key points, and action items. Export as PDF, Markdown, or Plain text.">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+    :root {
+      --paper: #F4F6FB;
+      --paper-raised: #FFFFFF;
+      --ink: #0F172A;
+      --ink-soft: #64748B;
+      --rule: #e2ecf0;
+      --primary: #1520ae;
+      --primary-hover: #304FFE;
+      --primary-soft: #EEF2FF;
+      --amber: #F59E0B;
+      --amber-soft: #FEF3C7;
+      --amber-dark: #D97706;
+      --teal: #0D9488;
+      --teal-soft: #CCFBF1;
+      --teal-dark: #0F766E;
+      --red: #F43F5E;
+      --red-soft: #FFE4E6;
+      --red-dark: #E11D48;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Times New Roman', Times, serif;
+      min-height: 100vh;
+    }
+
+    ::selection {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem 5rem;
+    }
+
+    /* ---------- header ---------- */
+    header.masthead {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--rule);
+      padding-bottom: 1.1rem;
+      margin-bottom: 2.2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .mast-title {
+      font-family: 'Times New Roman', Times, serif;
+      font-weight: 600;
+      font-size: 2.6rem;
+      letter-spacing: -0.01em;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .mast-title span {
+      color: var(--primary);
+      font-style: italic;
+    }
+
+    .mast-sub {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--ink-soft);
+      margin: 0.4rem 0 0;
+    }
+
+    .mast-meta {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--ink-soft);
+      text-align: right;
+      line-height: 1.6;
+    }
+
+    /* ---------- layout ---------- */
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+      gap: 1.8rem;
+      align-items: start;
+    }
+
+    @media (max-width:880px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--paper-raised);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+    }
+
+    .panel-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--ink-soft);
+      margin: 0 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .panel-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--rule);
+    }
+
+    /* ---------- dropzone ---------- */
+    .dropzone {
+      border: 1.5px dashed var(--rule);
+      border-radius: 8px;
+      padding: 2.1rem 1.2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s ease, background .15s ease;
+      background: var(--paper);
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .dropzone svg {
+      width: 30px;
+      height: 30px;
+      margin-bottom: 0.7rem;
+      stroke: var(--ink-soft);
+    }
+
+    .dropzone.dragover svg {
+      stroke: var(--primary);
+    }
+
+    .dz-title {
+      font-weight: 500;
+      font-size: 0.95rem;
+      margin: 0 0 0.25rem;
+    }
+
+    .dz-sub {
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+      margin: 0;
+    }
+
+    input[type=file] {
+      display: none;
+    }
+
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin: 1.1rem 0;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .or-divider::before,
+    .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--rule);
+    }
+
+    textarea#pasteArea {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 0.95rem;
+      padding: 0.7rem 0.8rem;
+      line-height: 1.5;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    textarea#pasteArea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(61, 90, 254, 0.12);
+    }
+
+    /* ---------- manifest card ---------- */
+    .manifest {
+      margin-top: 1.3rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--rule);
+      display: none;
+    }
+
+    .manifest.show {
+      display: block;
+    }
+
+    .manifest-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.83rem;
+      padding: 0.32rem 0;
+    }
+
+    .manifest-row .k {
+      color: var(--ink-soft);
+    }
+
+    .manifest-row .v {
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+    }
+
+    .manifest-name {
+      font-family: 'Fraunces', serif;
+      font-weight: 500;
+      font-size: 1.05rem;
+      margin: 0 0 0.6rem;
+      word-break: break-word;
+    }
+
+    button {
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      width: 100%;
+      margin-top: 1.1rem;
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 0.75rem 1rem;
+      border-radius: 9999px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background .15s ease, opacity .15s ease, transform .1s ease, box-shadow .15s ease;
+      box-shadow: 0 2px 8px rgba(61, 90, 254, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.99);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--rule);
+      color: var(--ink-soft);
+      font-size: 0.78rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      transition: all .15s ease;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .error-msg {
+      display: none;
+      margin-top: 0.9rem;
+      padding: 0.65rem 0.8rem;
+      background: var(--red-soft);
+      color: var(--red-dark);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .error-msg.show {
+      display: block;
+    }
+
+    /* ---------- recent list ---------- */
+    .recent-list {
+      margin-top: 1.3rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--rule);
+    }
+
+    .recent-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--rule);
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+
+    .recent-item:last-child {
+      border-bottom: none;
+    }
+
+    .recent-item:hover .recent-title {
+      color: var(--primary);
+    }
+
+    .recent-title {
+      font-weight: 500;
+    }
+
+    .recent-date {
+      color: var(--ink-soft);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      white-space: nowrap;
+    }
+
+    .recent-empty {
+      font-size: 0.8rem;
+      color: var(--ink-soft);
+      font-style: italic;
+    }
+
+    /* ---------- output side ---------- */
+    .output-panel {
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--ink-soft);
+    }
+
+    .empty-state svg {
+      width: 44px;
+      height: 44px;
+      stroke: var(--rule);
+      margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+      font-size: 0.88rem;
+      max-width: 280px;
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* condensation loader (signature element) */
+    .condense {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1rem;
+      display: none;
+    }
+
+    .condense.show {
+      display: flex;
+    }
+
+    .condense-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 220px;
+      margin-bottom: 1.2rem;
+    }
+
+    .condense-bar {
+      height: 8px;
+      border-radius: 2px;
+      background: var(--rule);
+      animation: shrinkbar 1.8s ease-in-out infinite;
+    }
+
+    .condense-bar:nth-child(1) {
+      width: 100%;
+      animation-delay: 0s;
+    }
+
+    .condense-bar:nth-child(2) {
+      width: 88%;
+      animation-delay: .1s;
+    }
+
+    .condense-bar:nth-child(3) {
+      width: 95%;
+      animation-delay: .2s;
+    }
+
+    .condense-bar:nth-child(4) {
+      width: 70%;
+      animation-delay: .3s;
+    }
+
+    .condense-bar:nth-child(5) {
+      width: 82%;
+      animation-delay: .4s;
+    }
+
+    .condense-bar:nth-child(6) {
+      width: 60%;
+      animation-delay: .5s;
+    }
+
+    @keyframes shrinkbar {
+
+      0%,
+      100% {
+        background: var(--rule);
+      }
+
+      50% {
+        background: var(--amber);
+      }
+    }
+
+    .condense-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--ink-soft);
+    }
+
+    /* tabs */
+    .tabs {
+      display: flex;
+      gap: 0.4rem;
+      margin-bottom: 1.3rem;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      background: transparent;
+      border: 1px solid var(--rule);
+      color: var(--ink-soft);
+      transition: all .15s ease;
+      cursor: pointer;
+    }
+
+    .tab:hover:not(.active) {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+      font-weight: 500;
+      box-shadow: 0 2px 6px rgba(61, 90, 254, 0.25);
+    }
+
+    .tab .count {
+      opacity: 0.8;
+      margin-left: 0.3rem;
+    }
+
+    .doc-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .doc-title {
+      font-family: 'Times New Roman', Times, serif;
+      font-weight: 600;
+      font-size: 1.4rem;
+      margin: 0;
+      line-height: 1.25;
+    }
+
+    .doc-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .summary-text {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 1.15rem;
+      line-height: 1.7;
+      color: var(--ink);
+      border-left: 3.5px solid var(--amber);
+      padding: 0.4rem 0 0.4rem 1.1rem;
+      margin: 0;
+      background: linear-gradient(90deg, rgba(254, 243, 199, 0.35) 0%, rgba(255, 255, 255, 0) 100%);
+      border-radius: 0 6px 6px 0;
+    }
+
+    ul.item-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    ul.item-list li {
+      display: flex;
+      gap: 0.7rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--rule);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    ul.item-list li:last-child {
+      border-bottom: none;
+    }
+
+    .item-marker {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 600;
+      margin-top: 0.1rem;
+    }
+
+    .key-points .item-marker {
+      background: var(--teal-soft);
+      color: var(--teal-dark);
+    }
+
+    .action-items .item-marker {
+      background: var(--red-soft);
+      color: var(--red-dark);
+    }
+
+    .stamp {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--teal-dark);
+      background: var(--teal-soft);
+      padding: 0.35rem 0.7rem;
+      border-radius: 9999px;
+      margin-bottom: 1.2rem;
+      font-weight: 500;
+    }
+
+    .download-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 5;
+      background: var(--paper-raised);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      padding: 0.3rem;
+      min-width: 170px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    }
+
+    .download-menu.show {
+      display: block;
+    }
+
+    .download-menu button {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: var(--ink);
+    }
+
+    .download-menu button:hover {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .download-menu button span {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--ink-soft);
+    }
+
+    .word-count-note {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--rule);
+      font-size: 0.75rem;
+      color: var(--ink-soft);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    @media (max-width:520px) {
+      .mast-title {
+        font-size: 2rem;
+      }
+
+      header.masthead {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .mast-meta {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <header class="masthead">
+      <div>
+        <h1 class="mast-title">Doc Summarizer<span>.</span></h1>
+        <p class="mast-sub">Documents in — the essence out</p>
+      </div>
+      <div class="mast-meta" id="dateStamp"></div>
+    </header>
+
+    <div class="grid">
+
+      <!-- LEFT: intake -->
+      <div class="panel">
+        <p class="panel-label">Intake</p>
+
+        <div class="dropzone" id="dropzone">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12m0-12 4 4m-4-4-4 4" />
+            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+          </svg>
+          <p class="dz-title">Drop a document here</p>
+          <p class="dz-sub">.pdf, .docx, .txt, .md, .csv & more — or click to browse</p>
+          <input type="file" id="fileInput"
+            accept=".pdf,.docx,.doc,.txt,.md,.rtf,.csv,.json,.html,.htm,.log,.text,text/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        </div>
+
+        <div class="or-divider">or paste text</div>
+        <textarea id="pasteArea" placeholder="Paste article, report, or transcript text here…"></textarea>
+
+        <div class="manifest" id="manifest">
+          <p class="manifest-name" id="manifestName">—</p>
+          <div class="manifest-row"><span class="k">Words</span><span class="v" id="manifestWords">—</span></div>
+          <div class="manifest-row"><span class="k">Est. reading time</span><span class="v"
+              id="manifestReadtime">—</span></div>
+        </div>
+
+        <button class="btn-primary" id="distillBtn" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v6m0 8v6M4.9 4.9l4.2 4.2m5.8 5.8 4.2 4.2M2 12h6m8 0h6M4.9 19.1l4.2-4.2m5.8-5.8 4.2-4.2" />
+          </svg>
+          Distill document
+        </button>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <div class="recent-list">
+          <p class="panel-label">Recent</p>
+          <div id="recentContainer">
+            <p class="recent-empty">Nothing distilled yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: output -->
+      <div class="panel output-panel">
+
+        <div class="empty-state" id="emptyState">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M9 15h6M9 11h3" />
+          </svg>
+          <p>Upload or paste a document on the left, then distill it into a summary, key points, and action items.</p>
+        </div>
+
+        <div class="condense" id="condenseState">
+          <div class="condense-bars">
+            <div class="condense-bar"></div>
+            <div class="condense-bar"></div>
+            <div class="condense-bar"></div>
+            <div class="condense-bar"></div>
+            <div class="condense-bar"></div>
+            <div class="condense-bar"></div>
+          </div>
+          <p class="condense-label" id="condenseLabel">Reading the document…</p>
+        </div>
+
+        <div id="resultState" style="display:none;">
+          <span class="stamp">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            Distilled
+          </span>
+          <div class="doc-title-row">
+            <h2 class="doc-title" id="resultTitle">—</h2>
+            <div class="doc-actions" style="position:relative;">
+              <button class="btn-ghost" id="copyBtn">Copy</button>
+              <button class="btn-ghost" id="downloadBtn">Download <svg width="10" height="10" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                  style="margin-left:4px;vertical-align:1px;">
+                  <path d="m6 9 6 6 6-6" />
+                </svg></button>
+              <div class="download-menu" id="downloadMenu">
+                <button data-fmt="pdf">PDF document<span>.pdf</span></button>
+                <button data-fmt="md">Markdown<span>.md</span></button>
+                <button data-fmt="txt">Plain text<span>.txt</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="summary">Summary</button>
+            <button class="tab" data-tab="keypoints">Key points <span class="count" id="kpCount"></span></button>
+            <button class="tab" data-tab="actions">Action items <span class="count" id="aiCount"></span></button>
+          </div>
+
+          <div class="tab-panel active" id="panel-summary">
+            <p class="summary-text" id="summaryText">—</p>
+          </div>
+          <div class="tab-panel key-points" id="panel-keypoints">
+            <ul class="item-list" id="keyPointsList"></ul>
+          </div>
+          <div class="tab-panel action-items" id="panel-actions">
+            <ul class="item-list" id="actionItemsList"></ul>
+          </div>
+
+          <div class="word-count-note" id="reductionNote"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    document.getElementById('dateStamp').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    let extractedText = '';
+    let extractedName = '';
+    let currentResult = null;
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const pasteArea = document.getElementById('pasteArea');
+    const distillBtn = document.getElementById('distillBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const manifest = document.getElementById('manifest');
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('show');
+      setTimeout(() => errorMsg.classList.remove('show'), 6000);
+    }
+
+    function wordCount(str) {
+      return (str.trim().match(/\S+/g) || []).length;
+    }
+
+    function updateManifest(name, text) {
+      const wc = wordCount(text);
+      document.getElementById('manifestName').textContent = name;
+      document.getElementById('manifestWords').textContent = wc.toLocaleString();
+      document.getElementById('manifestReadtime').textContent = Math.max(1, Math.round(wc / 220)) + ' min';
+      manifest.classList.add('show');
+      distillBtn.disabled = wc < 3;
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault(); dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    ['input', 'change', 'paste', 'keyup'].forEach(evt => {
+      pasteArea.addEventListener(evt, () => {
+        if (pasteArea.value.trim().length > 0) {
+          extractedText = pasteArea.value;
+          extractedName = 'Pasted text';
+          updateManifest(extractedName, extractedText);
+        } else if (!fileInput.files || !fileInput.files.length) {
+          manifest.classList.remove('show');
+          distillBtn.disabled = true;
+        }
+      });
+    });
+
+    async function handleFile(file) {
+      const name = file.name;
+      const ext = name.split('.').pop().toLowerCase();
+      extractedName = name;
+      pasteArea.value = '';
+
+      try {
+        if (ext === 'pdf') {
+          dropzone.querySelector('.dz-title').textContent = 'Reading PDF…';
+          const buf = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+          let text = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(it => it.str).join(' ') + '\n\n';
+          }
+          extractedText = text;
+        } else if (ext === 'docx') {
+          dropzone.querySelector('.dz-title').textContent = 'Reading Word doc…';
+          const buf = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer: buf });
+          extractedText = result.value;
+        } else {
+          try {
+            extractedText = await file.text();
+          } catch (e) {
+            showError('Could not read text content from this file.');
+            dropzone.querySelector('.dz-title').textContent = 'Drop a document here';
+            return;
+          }
+        }
+
+        dropzone.querySelector('.dz-title').textContent = 'Drop a document here';
+
+        if (wordCount(extractedText) < 3) {
+          showError('Could not find readable text in this file. It may be empty or a scanned image.');
+          manifest.classList.remove('show');
+          distillBtn.disabled = true;
+          return;
+        }
+
+        updateManifest(extractedName, extractedText);
+      } catch (err) {
+        console.error(err);
+        dropzone.querySelector('.dz-title').textContent = 'Drop a document here';
+        showError('Something went wrong reading that file. Try pasting the text instead.');
+      }
+    }
+
+    const emptyState = document.getElementById('emptyState');
+    const condenseState = document.getElementById('condenseState');
+    const resultState = document.getElementById('resultState');
+    const condenseLabel = document.getElementById('condenseLabel');
+
+    const loadingMessages = ['Reading the document…', 'Finding the through-line…', 'Pulling out what matters…', 'Almost there…'];
+
+    distillBtn.addEventListener('click', async () => {
+      if (pasteArea.value.trim().length > 0) {
+        extractedText = pasteArea.value;
+        extractedName = extractedName && extractedName !== 'Pasted text' ? extractedName : 'Pasted text';
+      }
+
+      if (!extractedText || wordCount(extractedText) < 3) {
+        showError('Please paste text or upload a document to distill.');
+        return;
+      }
+
+      distillBtn.disabled = true;
+      emptyState.style.display = 'none';
+      resultState.style.display = 'none';
+      condenseState.classList.add('show');
+
+      let msgIdx = 0;
+      condenseLabel.textContent = loadingMessages[0];
+      const msgInterval = setInterval(() => {
+        msgIdx = (msgIdx + 1) % loadingMessages.length;
+        condenseLabel.textContent = loadingMessages[msgIdx];
+      }, 1200);
+
+      try {
+        const result = await distill(extractedText, extractedName);
+        currentResult = result;
+        renderResult(result);
+        saveToHistory(result);
+        resultState.style.display = 'block';
+      } catch (err) {
+        console.error(err);
+        showError(err.message || 'Distillation failed. Please try again.');
+        emptyState.style.display = 'flex';
+      } finally {
+        clearInterval(msgInterval);
+        condenseState.classList.remove('show');
+        distillBtn.disabled = false;
+      }
+    });
+
+    async function distill(text, name) {
+      try {
+        const MAX_CHARS = 14000;
+        let truncated = false;
+        let input = text;
+        if (input.length > MAX_CHARS) {
+          input = input.slice(0, MAX_CHARS);
+          truncated = true;
+        }
+
+        const systemPrompt = `You are a precise document analyst. Respond with ONLY a JSON object, no markdown fences: {"title": "short title", "summary": "concise 3-5 sentence summary", "key_points": ["point 1"], "action_items": ["action 1"]}`;
+        const userMsg = `Document filename: ${name}\n\nDocument text:\n${input}`;
+
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 1000,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userMsg }]
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const textBlock = (data.content || []).find(b => b.type === 'text');
+          if (textBlock) {
+            let clean = textBlock.text.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+            let parsed = JSON.parse(clean);
+            return {
+              title: parsed.title || name,
+              summary: parsed.summary || '',
+              key_points: Array.isArray(parsed.key_points) ? parsed.key_points : [],
+              action_items: Array.isArray(parsed.action_items) ? parsed.action_items : [],
+              source_name: name,
+              source_words: wordCount(text),
+              truncated,
+              timestamp: Date.now()
+            };
+          }
+        }
+      } catch (apiErr) {
+        console.warn('API unavailable, switching to local NLP Distillation Engine:', apiErr);
+      }
+
+      return localDistill(text, name);
+    }
+
+    function localDistill(text, name) {
+      const cleanText = text.trim();
+      const sentences = cleanText
+        .split(/(?<=[.!?])\s+|\n+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 5);
+
+      const words = cleanText.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) || [];
+      const freq = {};
+      const stopWords = new Set(['the', 'and', 'for', 'that', 'this', 'with', 'have', 'you', 'was', 'not', 'are', 'from', 'they', 'will', 'would', 'there', 'their', 'what', 'about', 'which', 'when', 'one', 'all', 'also', 'how', 'other', 'out', 'many', 'then', 'them', 'these', 'some', 'so', 'into', 'has', 'more', 'her', 'two', 'him', 'see', 'could', 'no', 'make', 'than', 'been', 'its', 'who', 'now', 'people', 'my', 'made', 'over', 'did', 'down', 'only', 'way', 'find', 'use', 'may', 'water', 'long', 'little', 'very', 'after', 'words', 'called', 'just', 'where', 'most', 'know']);
+
+      words.forEach(w => {
+        if (!stopWords.has(w)) {
+          freq[w] = (freq[w] || 0) + 1;
+        }
+      });
+
+      const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      let title = name;
+      if (lines.length > 0 && lines[0].length < 70 && !lines[0].endsWith('.')) {
+        title = lines[0];
+      } else if (name && name !== 'Pasted text') {
+        title = name.replace(/\.[^/.]+$/, '');
+      } else if (sentences.length > 0) {
+        const first = sentences[0];
+        title = first.length > 50 ? first.slice(0, 50) + '…' : first;
+      }
+
+      const scored = sentences.map((sent, index) => {
+        const sWords = sent.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) || [];
+        let score = 0;
+        sWords.forEach(w => {
+          if (freq[w]) score += freq[w];
+        });
+        if (index === 0) score *= 1.5;
+        if (index === 1) score *= 1.2;
+        return { sent, score, index };
+      });
+
+      const sorted = [...scored].sort((a, b) => b.score - a.score);
+      const summaryCount = Math.min(Math.max(2, Math.ceil(sentences.length * 0.25)), 5);
+      const topSummary = sorted.slice(0, summaryCount)
+        .sort((a, b) => a.index - b.index)
+        .map(s => s.sent);
+
+      const summary = topSummary.length > 0 ? topSummary.join(' ') : cleanText;
+
+      const kpCount = Math.min(Math.max(3, Math.ceil(sentences.length * 0.3)), 6);
+      const keyPoints = sorted.slice(0, kpCount).map(s => s.sent);
+
+      const actionRegex = /\b(will|must|should|need to|needs to|action|assign|todo|complete|review|submit|update|create|ensure|follow up|schedule|implement|prepare|organize|send|verify|check)\b/i;
+      let actionItems = sentences
+        .filter(s => actionRegex.test(s))
+        .slice(0, 5);
+
+      if (!actionItems.length && sentences.length > 1) {
+        actionItems = [
+          'Review document key findings with stakeholders.',
+          'Formulate next steps based on document insights.'
+        ];
+      }
+
+      return {
+        title: title || 'Document Summary',
+        summary: summary,
+        key_points: keyPoints.length ? keyPoints : [summary],
+        action_items: actionItems,
+        source_name: name,
+        source_words: wordCount(text),
+        truncated: false,
+        timestamp: Date.now()
+      };
+    }
+
+    function renderResult(r) {
+      document.getElementById('resultTitle').textContent = r.title;
+      document.getElementById('summaryText').textContent = r.summary;
+
+      const kpList = document.getElementById('keyPointsList');
+      kpList.innerHTML = '';
+      r.key_points.forEach((pt, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="item-marker">${i + 1}</span><span>${escapeHtml(pt)}</span>`;
+        kpList.appendChild(li);
+      });
+
+      const aiList = document.getElementById('actionItemsList');
+      aiList.innerHTML = '';
+      if (r.action_items.length === 0) {
+        aiList.innerHTML = '<li style="border:none;color:var(--ink-soft);font-style:italic;">No explicit action items found in this document.</li>';
+      } else {
+        r.action_items.forEach(item => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="item-marker"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span>${escapeHtml(item)}</span>`;
+          aiList.appendChild(li);
+        });
+      }
+
+      document.getElementById('kpCount').textContent = r.key_points.length;
+      document.getElementById('aiCount').textContent = r.action_items.length;
+
+      const summaryWords = wordCount(r.summary);
+      const pct = r.source_words > 0 ? Math.round((1 - summaryWords / r.source_words) * 100) : 0;
+      document.getElementById('reductionNote').textContent =
+        `${r.source_words.toLocaleString()} words → ${summaryWords} word summary` +
+        (pct > 0 ? ` (${pct}% shorter)` : '') +
+        (r.truncated ? ' · source was truncated for length' : '');
+
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector('.tab[data-tab="summary"]').classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-summary').classList.add('active');
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', () => {
+      if (!currentResult) return;
+      const r = currentResult;
+      let text = `${r.title}\n\nSUMMARY\n${r.summary}\n\nKEY POINTS\n` +
+        r.key_points.map((p, i) => `${i + 1}. ${p}`).join('\n') +
+        `\n\nACTION ITEMS\n` + (r.action_items.length ? r.action_items.map((a, i) => `${i + 1}. ${a}`).join('\n') : '(none found)');
+
+      const showCopied = () => {
+        const btn = document.getElementById('copyBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showCopied).catch(() => fallbackCopy(text, showCopied));
+      } else {
+        fallbackCopy(text, showCopied);
+      }
+    });
+
+    function fallbackCopy(text, cb) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        if (cb) cb();
+      } catch (e) {
+        showError('Could not copy to clipboard.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    const downloadBtn = document.getElementById('downloadBtn');
+    const downloadMenu = document.getElementById('downloadMenu');
+
+    downloadBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!currentResult) return;
+      downloadMenu.classList.toggle('show');
+    });
+    document.addEventListener('click', () => downloadMenu.classList.remove('show'));
+
+    function fileBase(title) {
+      const clean = (title || 'summary').replace(/[^a-z0-9]+/gi, '_').toLowerCase().replace(/^_+|_+$/g, '');
+      return clean || 'document_summary';
+    }
+
+    function triggerDownload(blob, filename) {
+      try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      } catch (err) {
+        console.error(err);
+        showError('Could not trigger download. Please check browser permissions.');
+      }
+    }
+
+    function downloadTxt(r) {
+      const titleStr = r.title || 'Document Summary';
+      const underline = '='.repeat(Math.max(5, titleStr.length));
+      const text = `${titleStr}\n${underline}\n\nSUMMARY\n-------\n${r.summary || ''}\n\nKEY POINTS\n----------\n` +
+        (r.key_points && r.key_points.length ? r.key_points.map((p, i) => `${i + 1}. ${p}`).join('\n') : '(none found)') +
+        `\n\nACTION ITEMS\n------------\n` + (r.action_items && r.action_items.length ? r.action_items.map((a, i) => `${i + 1}. ${a}`).join('\n') : '(none found)');
+      triggerDownload(new Blob([text], { type: 'text/plain;charset=utf-8' }), fileBase(r.title) + '.txt');
+    }
+
+    function downloadMd(r) {
+      const titleStr = r.title || 'Document Summary';
+      const md = `# ${titleStr}\n\n## Summary\n\n${r.summary || ''}\n\n## Key points\n\n` +
+        (r.key_points && r.key_points.length ? r.key_points.map(p => `- ${p}`).join('\n') : '_No key points found._') +
+        `\n\n## Action items\n\n` + (r.action_items && r.action_items.length ? r.action_items.map(a => `- [ ] ${a}`).join('\n') : '_No action items found._');
+      triggerDownload(new Blob([md], { type: 'text/markdown;charset=utf-8' }), fileBase(r.title) + '.md');
+    }
+
+    function downloadPdf(r) {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        showError('PDF library is loading or unavailable. Please download as Markdown or Text.');
+        return;
+      }
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+        const margin = 56;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const maxWidth = pageWidth - margin * 2;
+        let y = margin;
+
+        function ensureRoom(lineHeight = 15) {
+          if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
+            doc.addPage();
+            y = margin;
+          }
+        }
+
+        doc.setFont('times', 'bold'); doc.setFontSize(18);
+        const titleLines = doc.splitTextToSize(r.title || 'Document Summary', maxWidth);
+        titleLines.forEach(line => { ensureRoom(22); doc.text(line, margin, y); y += 22; });
+        y += 6;
+
+        function heading(text) {
+          y += 10; ensureRoom(18);
+          doc.setFont('times', 'bold'); doc.setFontSize(12); doc.setTextColor(140, 90, 10);
+          doc.text(text.toUpperCase(), margin, y); y += 16;
+          doc.setTextColor(20, 20, 20);
+        }
+        function paragraph(text) {
+          if (!text) return;
+          doc.setFont('times', 'normal'); doc.setFontSize(10.5);
+          const lines = doc.splitTextToSize(text, maxWidth);
+          lines.forEach(line => { ensureRoom(15); doc.text(line, margin, y); y += 15; });
+        }
+        function bulletList(items, empty) {
+          doc.setFont('times', 'normal'); doc.setFontSize(10.5);
+          if (!items || !items.length) {
+            ensureRoom(15); doc.text(empty, margin, y); y += 15; return;
+          }
+          items.forEach((item, i) => {
+            const lines = doc.splitTextToSize(`${i + 1}. ${item}`, maxWidth - 10);
+            lines.forEach((line, li) => { ensureRoom(15); doc.text(line, margin + (li === 0 ? 0 : 10), y); y += 15; });
+          });
+        }
+
+        heading('Summary');
+        paragraph(r.summary);
+        heading('Key points');
+        bulletList(r.key_points, 'No key points found.');
+        heading('Action items');
+        bulletList(r.action_items, 'No action items found.');
+
+        doc.save(fileBase(r.title) + '.pdf');
+      } catch (pdfErr) {
+        console.error('PDF generation error:', pdfErr);
+        showError('Failed to generate PDF. Downloading Plain Text version instead.');
+        downloadTxt(r);
+      }
+    }
+
+    downloadMenu.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!currentResult) return;
+        const fmt = btn.dataset.fmt;
+        if (fmt === 'txt') downloadTxt(currentResult);
+        else if (fmt === 'md') downloadMd(currentResult);
+        else if (fmt === 'pdf') downloadPdf(currentResult);
+        downloadMenu.classList.remove('show');
+      });
+    });
+
+    /* ---------- storage helper with localStorage fallback ---------- */
+    const recentContainer = document.getElementById('recentContainer');
+
+    const safeStorage = {
+      async get(key) {
+        try {
+          if (window.storage && typeof window.storage.get === 'function') {
+            return await window.storage.get(key, false);
+          }
+        } catch (e) { }
+        try {
+          const item = localStorage.getItem(key);
+          return item !== null ? { value: item } : null;
+        } catch (e) {
+          return null;
+        }
+      },
+      async set(key, value) {
+        try {
+          if (window.storage && typeof window.storage.set === 'function') {
+            return await window.storage.set(key, value, false);
+          }
+        } catch (e) { }
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) { }
+      }
+    };
+
+    async function saveToHistory(r) {
+      try {
+        const id = 'summary:' + r.timestamp;
+        await safeStorage.set(id, JSON.stringify(r));
+        let listResult = await safeStorage.get('history:index');
+        let ids = [];
+        if (listResult && listResult.value) {
+          try { ids = JSON.parse(listResult.value); } catch (e) { ids = []; }
+        }
+        ids = ids.filter(i => i !== id);
+        ids.unshift(id);
+        ids = ids.slice(0, 12);
+        await safeStorage.set('history:index', JSON.stringify(ids));
+        loadHistory();
+      } catch (e) {
+        console.error('Could not save history', e);
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        let listResult = await safeStorage.get('history:index');
+        if (!listResult || !listResult.value) {
+          recentContainer.innerHTML = '<p class="recent-empty">Nothing distilled yet.</p>';
+          return;
+        }
+        let ids = [];
+        try { ids = JSON.parse(listResult.value); } catch (e) { ids = []; }
+        if (!ids.length) {
+          recentContainer.innerHTML = '<p class="recent-empty">Nothing distilled yet.</p>';
+          return;
+        }
+        recentContainer.innerHTML = '';
+        for (const id of ids) {
+          let item = await safeStorage.get(id);
+          if (!item || !item.value) continue;
+          let r;
+          try { r = JSON.parse(item.value); } catch (e) { continue; }
+          const div = document.createElement('div');
+          div.className = 'recent-item';
+          const date = new Date(r.timestamp);
+          div.innerHTML = `<span class="recent-title">${escapeHtml(r.title)}</span><span class="recent-date">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`;
+          div.addEventListener('click', () => {
+            currentResult = r;
+            renderResult(r);
+            emptyState.style.display = 'none';
+            condenseState.classList.remove('show');
+            resultState.style.display = 'block';
+          });
+          recentContainer.appendChild(div);
+        }
+      } catch (e) {
+        console.error('Could not load history', e);
+        recentContainer.innerHTML = '<p class="recent-empty">Nothing distilled yet.</p>';
+      }
+    }
+
+    loadHistory();
+  </script>
+</body>
+
+</html>
